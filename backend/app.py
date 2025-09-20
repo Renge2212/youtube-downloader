@@ -60,7 +60,7 @@ class DownloadThread(threading.Thread):
                 })
             else:  # mp4
                 ydl_opts.update({
-                    'format': 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
+                    'format': 'best[ext=mp4]/best',
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

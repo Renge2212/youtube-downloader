@@ -62,6 +62,9 @@ backend/build/
 frontend/dist/
 frontend/node_modules/
 
+# FFmpeg binaries (large files)
+backend/ffmpeg/
+
 # PyInstaller
 *.spec
 

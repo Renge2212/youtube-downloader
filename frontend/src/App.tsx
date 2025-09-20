@@ -30,6 +30,9 @@ function App() {
   const [status, setStatus] = useState<DownloadStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [logs, setLogs] = useState<string[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
 
   const handleDownload = async () => {
     if (!url) {
@@ -112,6 +115,27 @@ function App() {
       default:
         return format;
     }
+  };
+
+  const fetchLogs = async () => {
+    setLogLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/logs');
+      if (response.ok) {
+        const data = await response.json();
+        setLogs(data.logs);
+      }
+    } catch (err) {
+      console.error('ログの取得に失敗しました:', err);
+    }
+    setLogLoading(false);
+  };
+
+  const toggleLogs = () => {
+    if (!showLogs) {
+      fetchLogs();
+    }
+    setShowLogs(!showLogs);
   };
 
   return (
@@ -277,7 +301,65 @@ function App() {
         <Typography variant="caption" color="text.secondary">
           現在の選択: {getFormatIcon()} {getFormatLabel()}
         </Typography>
+        
+        {/* ログ表示トグルボタン */}
+        <Box mt={2}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={toggleLogs}
+            disabled={logLoading}
+            sx={{ 
+              fontSize: '0.75rem',
+              borderRadius: 1
+            }}
+          >
+            {logLoading ? <CircularProgress size={16} /> : (showLogs ? 'ログを隠す' : '開発者ログを表示')}
+          </Button>
+        </Box>
       </Box>
+
+      {/* ログ表示セクション */}
+      {showLogs && (
+        <Card 
+          elevation={2} 
+          sx={{ 
+            mt: 2,
+            borderRadius: 1,
+            maxHeight: 300,
+            overflow: 'auto'
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
+              バックエンドログ
+            </Typography>
+            <Box 
+              sx={{ 
+                backgroundColor: '#f5f5f5', 
+                p: 1, 
+                borderRadius: 1,
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                maxHeight: 200,
+                overflow: 'auto'
+              }}
+            >
+              {logs.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  ログがありません
+                </Typography>
+              ) : (
+                logs.map((log, index) => (
+                  <Typography key={index} variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {log}
+                  </Typography>
+                ))
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      )}
     </Container>
   );
 }

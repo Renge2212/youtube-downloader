@@ -52,13 +52,44 @@ def run_flask_dev():
     venv_python = os.path.join(backend_dir, 'venv', 'Scripts', 'python.exe')
     
     try:
-        # 仮想環境内のPythonを使用してFlaskサーバーを起動
-        subprocess.run([venv_python, 'app.py'], 
-                      cwd=backend_dir, check=True, shell=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Flaskサーバー起動エラー: {e}")
+        # 仮想環境内のPythonを使用してFlaskサーバーを起動（コンソール出力あり）
+        process = subprocess.Popen([venv_python, 'app.py'], 
+                                 cwd=backend_dir, 
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,  # 標準エラーを標準出力にリダイレクト
+                                 text=True,
+                                 shell=True,
+                                 bufsize=1,  # 行バッファリング
+                                 universal_newlines=True)
+        
+        # 非同期で出力を読み取り、ログを表示
+        def log_output(pipe):
+            for line in iter(pipe.readline, ''):
+                print(f"[Flask] {line.strip()}")
+            pipe.close()
+        
+        # 別スレッドでログ出力
+        log_thread = threading.Thread(target=log_output, args=(process.stdout,), daemon=True)
+        log_thread.start()
+        
+        # サーバー起動を待機
+        time.sleep(5)
+        
+        # プロセスがまだ実行中か確認
+        if process.poll() is not None:
+            # プロセスが既に終了している場合はエラーを出力
+            print("❌ Flaskサーバーが異常終了しました")
+            return None
+        
+        print("✅ Flaskサーバーが起動しました")
+        return process
+        
     except FileNotFoundError:
         print("❌ 仮想環境のPythonが見つかりません。セットアップを確認してください")
+        return None
+    except Exception as e:
+        print(f"❌ Flaskサーバー起動エラー: {e}")
+        return None
 
 def run_static_server():
     """静的ファイルサーバーを起動（本番モード用）"""
@@ -110,9 +141,39 @@ def run_webview(port=5173):
     except Exception as e:
         print(f"❌ WebView2起動エラー: {e}")
     finally:
-        # ターミナル状態をリセットするためにプロセスを終了
-        import sys
+        # バッチファイルが終了処理を行うため、ここでは単純に終了
+        # すべてのバックグラウンドプロセスを確実に終了
+        cleanup_processes()
+        
+        # 静かに終了（バッチファイルが新しいターミナルを起動する）
+        print("✅ アプリケーションが終了しました")
         sys.exit(0)
+
+def cleanup_processes():
+    """すべてのバックグラウンドプロセスをクリーンアップ"""
+    try:
+        # ポート5000を使用しているPythonプロセスを終了
+        import subprocess
+        result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True, shell=True)
+        lines = result.stdout.split('\n')
+        python_pids = set()
+        
+        for line in lines:
+            if ':5000' in line and 'LISTENING' in line:
+                parts = line.split()
+                if len(parts) >= 5:
+                    pid = parts[-1]
+                    python_pids.add(pid)
+        
+        for pid in python_pids:
+            try:
+                subprocess.run(['taskkill', '/f', '/pid', pid], 
+                             capture_output=True, shell=True)
+            except:
+                pass
+                
+    except Exception as e:
+        print(f"クリーンアップエラー: {e}")
 
 def setup_virtualenv():
     """仮想環境のセットアップを確認"""
@@ -157,37 +218,102 @@ if __name__ == '__main__':
         # モード1: フロントエンド開発サーバー使用
         print("\n📍 開発モード: フロントエンドホットリロード有効")
         
-        # フロントエンド開発サーバーを別スレッドで起動
-        frontend_thread = threading.Thread(target=run_frontend_dev, daemon=True)
-        frontend_thread.start()
+        # フロントエンド開発サーバーを起動
+        frontend_process = run_frontend_dev()
+        if not frontend_process:
+            print("❌ フロントエンドサーバーの起動に失敗しました")
+            sys.exit(1)
         
-        # Flaskサーバーを別スレッドで起動
-        flask_thread = threading.Thread(target=run_flask_dev, daemon=True)
-        flask_thread.start()
+        # Flaskサーバーを起動
+        flask_process = run_flask_dev()
+        if not flask_process:
+            print("❌ Flaskサーバーの起動に失敗しました")
+            frontend_process.terminate()
+            sys.exit(1)
         
-        # サーバー起動待機
-        time.sleep(3)
+        # サーバー起動待機（より長く待機）
+        time.sleep(5)
+        
+        # サーバーが正常に起動しているか確認（ソケットレベルでの接続テスト）
+        max_retries = 5
+        connected = False
+        for attempt in range(max_retries):
+            try:
+                # ソケットを使用した基本的な接続テスト
+                import socket
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(3)
+                result = sock.connect_ex(('127.0.0.1', 5000))
+                sock.close()
+                
+                if result == 0:
+                    print("✅ バックエンドサーバーが正常に起動しました")
+                    connected = True
+                    break
+                else:
+                    print(f"⏳ ポート接続試行 {attempt + 1}/{max_retries} 失敗、再試行します...")
+                    time.sleep(2)
+                    
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"⚠️  バックエンドサーバーに接続できません: {e}")
+                else:
+                    print(f"⏳ 接続試行 {attempt + 1}/{max_retries} 失敗、再試行します...")
+                    time.sleep(2)
+        
+        if not connected:
+            print("⚠️  バックエンドサーバーへの接続に失敗しましたが、開発を続行します")
+            print("Flaskサーバーのログを確認: [Flask] * Running on http://127.0.0.1:5000")
         
         # WebView2を起動
         run_webview()
+        
+        # WebView終了後にすべてのプロセスを確実に終了
+        try:
+            frontend_process.terminate()
+        except:
+            pass
+        
+        try:
+            flask_process.terminate()
+        except:
+            pass
+        
+        # ポート5000を使用しているプロセスを強制終了
+        try:
+            import subprocess
+            # Windowsの場合
+            subprocess.run(['taskkill', '/f', '/im', 'python.exe'], 
+                         capture_output=True, shell=True)
+        except:
+            pass
         
     elif mode == "2":
         # モード2: 静的ファイル使用
         print("\n📍 本番モード: ビルド済み静的ファイル使用")
         
-        # 静的ファイルサーバーを別スレッドで起動
-        static_thread = threading.Thread(target=run_static_server, daemon=True)
-        static_thread.start()
+        # 静的ファイルサーバーを起動
+        static_process = run_static_server()
+        if not static_process:
+            print("❌ 静的ファイルサーバーの起動に失敗しました")
+            sys.exit(1)
         
-        # Flaskサーバーを別スレッドで起動
-        flask_thread = threading.Thread(target=run_flask_dev, daemon=True)
-        flask_thread.start()
+        # Flaskサーバーを起動
+        flask_process = run_flask_dev()
+        if not flask_process:
+            print("❌ Flaskサーバーの起動に失敗しました")
+            static_process.terminate()
+            sys.exit(1)
         
         # サーバー起動待機
         time.sleep(2)
         
         # WebView2を起動
         run_webview()
+        
+        # WebView終了後にすべてのプロセスを終了
+        static_process.terminate()
+        flask_process.terminate()
         
     else:
         print("❌ 無効な選択です。1 または 2 を入力してください")

@@ -10,11 +10,16 @@ import os
 import time
 import threading
 
-# Pythonのパスを追加してモジュールをインポート可能に
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+# 仮想環境のPythonパスを追加（WebView用）
+backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+venv_dir = os.path.join(backend_dir, 'venv')
+venv_site_packages = os.path.join(venv_dir, 'Lib', 'site-packages')
 
-from app import app as flask_app
-from static_server import start_static_server
+if os.path.exists(venv_site_packages):
+    sys.path.insert(0, venv_site_packages)
+
+# Pythonのパスを追加してモジュールをインポート可能に
+sys.path.insert(0, backend_dir)
 
 def run_frontend_dev():
     """フロントエンド開発サーバーを起動"""
@@ -29,24 +34,37 @@ def run_frontend_dev():
         print("❌ npmが見つかりません。Node.jsがインストールされているか確認してください")
 
 def run_flask_dev():
-    """Flask開発サーバーを起動"""
+    """Flask開発サーバーを起動（仮想環境内のPythonを使用）"""
     print("🔧 Flask開発サーバーを起動中...")
+    backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+    venv_python = os.path.join(backend_dir, 'venv', 'Scripts', 'python.exe')
+    
     try:
-        flask_app.run(
-            host='127.0.0.1',
-            port=5000,
-            debug=True,
-            use_reloader=False
-        )
-    except Exception as e:
+        # 仮想環境内のPythonを使用してFlaskサーバーを起動
+        subprocess.run([venv_python, 'app.py'], 
+                      cwd=backend_dir, check=True, shell=True)
+    except subprocess.CalledProcessError as e:
         print(f"❌ Flaskサーバー起動エラー: {e}")
+    except FileNotFoundError:
+        print("❌ 仮想環境のPythonが見つかりません。セットアップを確認してください")
 
 def run_static_server():
     """静的ファイルサーバーを起動（本番モード用）"""
     print("📁 静的ファイルサーバーを起動中...")
     frontend_dist = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+    backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+    venv_python = os.path.join(backend_dir, 'venv', 'Scripts', 'python.exe')
+    
     if os.path.exists(frontend_dist):
-        start_static_server(frontend_dist, port=5173)
+        try:
+            # 仮想環境内のPythonを使用して静的サーバーを起動
+            subprocess.run([venv_python, '-c', 
+                          f'from static_server import start_static_server; start_static_server(r"{frontend_dist}", port=5173)'],
+                         cwd=backend_dir, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ 静的サーバー起動エラー: {e}")
+        except FileNotFoundError:
+            print("❌ 仮想環境のPythonが見つかりません。セットアップを確認してください")
     else:
         print("⚠️  フロントエンドのビルドファイルが見つかりません。先に npm run build を実行してください")
 
@@ -74,9 +92,41 @@ def run_webview():
     except Exception as e:
         print(f"❌ WebView2起動エラー: {e}")
 
+def setup_virtualenv():
+    """仮想環境のセットアップを確認"""
+    backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+    venv_dir = os.path.join(backend_dir, 'venv')
+    
+    # 仮想環境が存在するか確認
+    if not os.path.exists(venv_dir):
+        print("⚠️  仮想環境が見つかりません。セットアップを実行します...")
+        try:
+            subprocess.run([sys.executable, '-m', 'venv', 'venv'], 
+                         cwd=backend_dir, check=True, shell=True)
+            print("✅ 仮想環境を作成しました")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ 仮想環境作成エラー: {e}")
+            return False
+    
+    # 必要なパッケージをインストール
+    try:
+        pip_cmd = os.path.join(venv_dir, 'Scripts', 'pip.exe')
+        subprocess.run([pip_cmd, 'install', '-r', 'requirements.txt'], 
+                      cwd=backend_dir, check=True, shell=True)
+        print("✅ 必要なパッケージをインストールしました")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ パッケージインストールエラー: {e}")
+        return False
+
 if __name__ == '__main__':
     print("🎯 YouTube Downloader 開発モード起動")
     print("=" * 50)
+    
+    # 仮想環境のセットアップを確認
+    if not setup_virtualenv():
+        print("❌ 仮想環境のセットアップに失敗しました")
+        sys.exit(1)
     
     # 起動モード選択
     mode = input("起動モードを選択してください:\n1. フロントエンド開発 + Flask + WebView2\n2. 静的ファイル + Flask + WebView2\n選択 (1/2): ").strip()

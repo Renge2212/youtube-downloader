@@ -6,8 +6,8 @@
 
 ### 方法1: 開発スクリプトを使用（推奨）
 
-```bash
-# 開発用スクリプトを実行
+```cmd
+:: 開発用スクリプトを実行
 python dev_start.py
 ```
 
@@ -17,16 +17,16 @@ python dev_start.py
 
 ### 方法2: 手動で各サーバーを起動
 
-```bash
-# ターミナル1: フロントエンド開発サーバー
+```cmd
+:: ターミナル1: フロントエンド開発サーバー
 cd frontend
 npm run dev
 
-# ターミナル2: Flaskバックエンドサーバー
+:: ターミナル2: Flaskバックエンドサーバー
 cd backend
 python app.py
 
-# ターミナル3: WebView2アプリ
+:: ターミナル3: WebView2アプリ
 python webview_app.py
 ```
 
@@ -56,18 +56,15 @@ python webview_app.py
 ## トラブルシューティング
 
 ### Node.js/npmが見つからない場合
-```bash
-# Node.jsをインストール
-# https://nodejs.org/ からダウンロード
+Node.jsをインストール: https://nodejs.org/ からダウンロード
 
-# 依存関係をインストール
+```cmd
 cd frontend
 npm install
 ```
 
 ### Pythonモジュールが見つからない場合
-```bash
-# 必要なPythonパッケージをインストール
+```cmd
 cd backend
 pip install -r requirements.txt
 ```
@@ -93,6 +90,6 @@ pip install -r requirements.txt
 ## 実行ファイル作成
 
 開発完了後、実行ファイルを作成：
-```bash
+```cmd
 cd backend
 python -m PyInstaller --name="YouTubeDownloader" --onefile --add-data="../frontend/dist;frontend/dist" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil webview_app.py

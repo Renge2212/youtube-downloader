@@ -21,14 +21,8 @@ def run_frontend_dev():
     print("🚀 フロントエンド開発サーバーを起動中...")
     frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend')
     try:
-        # Windowsの場合
-        if os.name == 'nt':
-            subprocess.run(['npm.cmd', 'run', 'dev'], 
-                          cwd=frontend_dir, check=True, shell=True)
-        else:
-            # Linux/Macの場合
-            subprocess.run(['npm', 'run', 'dev'], 
-                          cwd=frontend_dir, check=True, shell=True)
+        subprocess.run(['npm.cmd', 'run', 'dev'], 
+                      cwd=frontend_dir, check=True, shell=True)
     except subprocess.CalledProcessError as e:
         print(f"❌ フロントエンドサーバー起動エラー: {e}")
     except FileNotFoundError:

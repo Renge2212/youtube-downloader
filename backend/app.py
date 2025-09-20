@@ -279,11 +279,13 @@ if __name__ == '__main__':
             print("警告: フロントエンドのビルドファイルが見つかりません")
             print(f"探しているパス: {frontend_dist}")
     
-    # メインのFlaskアプリを起動（0.0.0.0でリッスン、デバッグ詳細表示）
+    # メインのFlaskアプリを起動
+    # 製品版ではデバッグモードを無効化、開発時は環境変数で制御可能
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(
-        host='0.0.0.0', 
+        host='127.0.0.1',  # ローカルホストのみでリッスン
         port=5000, 
-        debug=True,  # 常にデバッグモードを有効
+        debug=debug_mode,
         threaded=True,
-        use_reloader=False  # リローダーを無効にしてデバッグを安定化
+        use_reloader=debug_mode  # デバッグ時のみリローダーを有効
     )

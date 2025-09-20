@@ -22,14 +22,20 @@ def run_flask():
             print("警告: フロントエンドのビルドファイルが見つかりません")
             print(f"探しているパス: {frontend_dist}")
     
-    # Flaskアプリを起動（デバッグモードはオフ）
-    flask_app.run(
-        host='127.0.0.1', 
-        port=5000, 
-        debug=False,
-        threaded=True,
-        use_reloader=False
-    )
+    # 製品版ではWaitress WSGIサーバーを使用、開発時はFlask開発サーバーを使用
+    if is_production:
+        # Waitressで本番サーバーを起動
+        from waitress import serve
+        serve(flask_app, host='127.0.0.1', port=5000)
+    else:
+        # 開発時はFlask開発サーバーを使用
+        flask_app.run(
+            host='127.0.0.1', 
+            port=5000, 
+            debug=False,
+            threaded=True,
+            use_reloader=False
+        )
 
 if __name__ == '__main__':
     # Flaskを別スレッドで起動

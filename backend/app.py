@@ -43,20 +43,11 @@ class DownloadThread(threading.Thread):
             # フォーマットに応じたオプションを設定
             if self.format_type == 'mp3':
                 ydl_opts.update({
-                    'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': '192',
-                    }],
+                    'format': 'bestaudio[ext=mp3]/bestaudio',
                 })
             elif self.format_type == 'm4a':
                 ydl_opts.update({
                     'format': 'bestaudio[ext=m4a]/bestaudio',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'm4a',
-                    }],
                 })
             else:  # mp4
                 ydl_opts.update({

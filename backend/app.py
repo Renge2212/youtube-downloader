@@ -156,7 +156,6 @@ if __name__ == '__main__':
         frontend_dist = os.path.join(base_dir, 'frontend', 'dist')
         if os.path.exists(frontend_dist):
             start_static_server(frontend_dist, port=5173)
-            webbrowser.open('http://localhost:5173')
         else:
             print("警告: フロントエンドのビルドファイルが見つかりません")
             print(f"探しているパス: {frontend_dist}")

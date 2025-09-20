@@ -133,7 +133,7 @@ function App() {
     if (!showLogs) {
       fetchLogs();
       // ログ表示中は定期的に更新
-      const intervalId = window.setInterval(fetchLogs, 1000);
+      const intervalId = window.setInterval(fetchLogs, 200);
       setLogIntervalId(intervalId);
     } else {
       // ログ非表示時にインターバルをクリア

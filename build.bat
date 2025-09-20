@@ -29,8 +29,11 @@ call npm run build >nul 2>&1
 
 echo [4/5] 実行ファイルの作成...
 cd ..\backend
+echo   既存のビルドファイルをクリーンアップ中...
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
 echo   PyInstallerで実行ファイルをビルド中...
-venv\Scripts\python.exe -m PyInstaller --name="YouTubeDownloader" --onefile --windowed --add-data="../frontend/dist;frontend/dist" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil webview_app.py
+venv\Scripts\python.exe -m PyInstaller --name="YouTubeDownloader" --onefile --windowed --add-data="../frontend/dist;frontend/dist" --add-data="ffmpeg;ffmpeg" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil --clean webview_app.py
 
 echo [5/5] 完了！
 cd ..

@@ -30,11 +30,12 @@ def add_log(message):
     print(log_message)  # コンソールにも出力
 
 class DownloadThread(threading.Thread):
-    def __init__(self, url, format_type, task_id):
+    def __init__(self, url, format_type, task_id, quality=None):
         threading.Thread.__init__(self)
         self.url = url
         self.format_type = format_type
         self.task_id = task_id
+        self.quality = quality
         self.file_path = None
         self.error = None
 
@@ -59,6 +60,14 @@ class DownloadThread(threading.Thread):
                 'progress_hooks': [self.progress_hook],
             }
 
+            # FFmpegパスを設定（組み込みffmpegを使用）
+            ffmpeg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ffmpeg', 'ffmpeg.exe')
+            if os.path.exists(ffmpeg_path):
+                ydl_opts['ffmpeg_location'] = ffmpeg_path
+                add_log(f"FFmpegを使用: {ffmpeg_path}")
+            else:
+                add_log("警告: FFmpegが見つかりません。最高画質での結合ができません")
+
             # フォーマットに応じたオプションを設定
             if self.format_type == 'mp3':
                 ydl_opts.update({
@@ -71,10 +80,33 @@ class DownloadThread(threading.Thread):
                 })
                 add_log("M4A形式でダウンロード")
             else:  # mp4
-                ydl_opts.update({
-                    'format': 'best[ext=mp4]/best',
-                })
-                add_log("MP4形式でダウンロード")
+                # 画質に応じたフォーマット設定
+                if self.quality == 'highest':
+                    ydl_opts.update({
+                        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                    })
+                    add_log("MP4形式で最高画質でダウンロード")
+                elif self.quality == 'high':
+                    ydl_opts.update({
+                        'format': '137+140/22/18',  # 1080p + AAC / 720p / 360p
+                    })
+                    add_log("MP4形式で高画質でダウンロード")
+                elif self.quality == 'medium':
+                    ydl_opts.update({
+                        'format': '22/18',  # 720p / 360p
+                    })
+                    add_log("MP4形式で中画質でダウンロード")
+                elif self.quality == 'low':
+                    ydl_opts.update({
+                        'format': '18',  # 360p
+                    })
+                    add_log("MP4形式で低画質でダウンロード")
+                else:
+                    # デフォルト（従来の動作）
+                    ydl_opts.update({
+                        'format': 'best[ext=mp4]/best',
+                    })
+                    add_log("MP4形式でダウンロード（自動選択）")
 
             add_log("yt-dlpでダウンロード開始")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -189,6 +221,7 @@ def download_video():
         
         url = data.get('url')
         format_type = data.get('format', 'mp4')
+        quality = data.get('quality')
 
         if not url:
             add_log("URLが指定されていません")
@@ -211,7 +244,7 @@ def download_video():
         }
 
         # 別スレッドでダウンロードを開始
-        thread = DownloadThread(url, format_type, task_id)
+        thread = DownloadThread(url, format_type, task_id, quality)
         thread.start()
 
         add_log(f"ダウンロードタスク開始: {task_id}")

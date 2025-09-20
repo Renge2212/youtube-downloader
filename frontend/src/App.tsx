@@ -30,6 +30,7 @@ interface DownloadStatus {
 function App() {
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('mp4');
+  const [quality, setQuality] = useState('auto');
   const [, setTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState<DownloadStatus | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url, format }),
+        body: JSON.stringify({ url, format, quality }),
       });
 
       if (!response.ok) {
@@ -120,6 +121,23 @@ function App() {
         return 'M4A 音声';
       default:
         return format;
+    }
+  };
+
+  const getQualityLabel = () => {
+    switch (quality) {
+      case 'auto':
+        return '自動選択';
+      case 'highest':
+        return '最高画質';
+      case 'high':
+        return '高画質';
+      case 'medium':
+        return '中画質';
+      case 'low':
+        return '低画質';
+      default:
+        return quality;
     }
   };
 
@@ -252,6 +270,34 @@ function App() {
                 </Select>
               </FormControl>
 
+              {/* 画質選択（MP4形式のみ表示） */}
+              {format === 'mp4' && (
+                <FormControl 
+                  fullWidth 
+                  size="small"
+                  sx={{ 
+                    minWidth: { sm: 120 },
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1,
+                    }
+                  }}
+                >
+                  <InputLabel>画質</InputLabel>
+                  <Select
+                    value={quality}
+                    label="画質"
+                    onChange={(e) => setQuality(e.target.value)}
+                    disabled={loading}
+                  >
+                    <MenuItem value="auto">自動選択</MenuItem>
+                    <MenuItem value="highest">最高画質</MenuItem>
+                    <MenuItem value="high">高画質 (1080p)</MenuItem>
+                    <MenuItem value="medium">中画質 (720p)</MenuItem>
+                    <MenuItem value="low">低画質 (360p)</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
               <Button
                 variant="contained"
                 size="large"
@@ -351,7 +397,7 @@ function App() {
       {/* フッター情報 */}
       <Box mt={3} textAlign="center">
         <Typography variant="caption" color="text.secondary">
-          現在の選択: {getFormatIcon()} {getFormatLabel()}
+          現在の選択: {getFormatIcon()} {getFormatLabel()}{format === 'mp4' && ` (${getQualityLabel()})`}
         </Typography>
         
         {/* ログ表示トグルボタン */}

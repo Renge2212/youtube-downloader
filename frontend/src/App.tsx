@@ -32,7 +32,7 @@ function App() {
   const [error, setError] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [showLogs, setShowLogs] = useState(false);
-  const [logLoading, setLogLoading] = useState(false);
+  const [logIntervalId, setLogIntervalId] = useState<number | null>(null);
 
   const handleDownload = async () => {
     if (!url) {
@@ -118,7 +118,6 @@ function App() {
   };
 
   const fetchLogs = async () => {
-    setLogLoading(true);
     try {
       const response = await fetch('http://localhost:5000/logs');
       if (response.ok) {
@@ -128,12 +127,20 @@ function App() {
     } catch (err) {
       console.error('ログの取得に失敗しました:', err);
     }
-    setLogLoading(false);
   };
 
   const toggleLogs = () => {
     if (!showLogs) {
       fetchLogs();
+      // ログ表示中は定期的に更新
+      const intervalId = window.setInterval(fetchLogs, 1000);
+      setLogIntervalId(intervalId);
+    } else {
+      // ログ非表示時にインターバルをクリア
+      if (logIntervalId !== null) {
+        window.clearInterval(logIntervalId);
+        setLogIntervalId(null);
+      }
     }
     setShowLogs(!showLogs);
   };
@@ -308,13 +315,12 @@ function App() {
             variant="outlined"
             size="small"
             onClick={toggleLogs}
-            disabled={logLoading}
             sx={{ 
               fontSize: '0.75rem',
               borderRadius: 1
             }}
           >
-            {logLoading ? <CircularProgress size={16} /> : (showLogs ? 'ログを隠す' : '開発者ログを表示')}
+            {showLogs ? 'ログを隠す' : '開発者ログを表示'}
           </Button>
         </Box>
       </Box>

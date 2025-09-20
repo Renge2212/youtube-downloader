@@ -205,9 +205,10 @@ function App() {
                 disabled={loading || !url}
                 startIcon={loading ? <CircularProgress size={20} /> : <Download />}
                 sx={{ 
-                  minWidth: '120px',
+                  minWidth: '140px',
                   borderRadius: 1,
                   fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
                   background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
                   '&:hover': {
                     background: 'linear-gradient(45deg, #1565c0, #1e88e5)',

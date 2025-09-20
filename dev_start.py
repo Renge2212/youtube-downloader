@@ -26,12 +26,24 @@ def run_frontend_dev():
     print("🚀 フロントエンド開発サーバーを起動中...")
     frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend')
     try:
-        subprocess.run(['npm.cmd', 'run', 'dev'], 
-                      cwd=frontend_dir, check=True, shell=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ フロントエンドサーバー起動エラー: {e}")
+        # 開発サーバーを起動（バックグラウンドで実行）
+        process = subprocess.Popen(['npm.cmd', 'run', 'dev'], 
+                                 cwd=frontend_dir, 
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE,
+                                 text=True,
+                                 shell=True)
+        
+        # ポート番号を検出するための待機
+        time.sleep(5)
+        return process
+        
     except FileNotFoundError:
         print("❌ npmが見つかりません。Node.jsがインストールされているか確認してください")
+        return None
+    except Exception as e:
+        print(f"❌ フロントエンドサーバー起動エラー: {e}")
+        return None
 
 def run_flask_dev():
     """Flask開発サーバーを起動（仮想環境内のPythonを使用）"""
@@ -68,29 +80,39 @@ def run_static_server():
     else:
         print("⚠️  フロントエンドのビルドファイルが見つかりません。先に npm run build を実行してください")
 
-def run_webview():
+def run_webview(port=5173):
     """WebView2アプリを起動"""
     print("🌐 WebView2アプリを起動中...")
     try:
         import webview
-        # 開発モードではフロントエンド開発サーバーを使用
+        
+        # 動的にポートを指定してフロントエンド開発サーバーを使用
         window = webview.create_window(
             'YouTube Downloader (開発モード)',
-            'http://localhost:5173',  # Vite開発サーバー
+            f'http://localhost:{port}',  # Vite開発サーバー
             width=1000,
             height=700,
             resizable=True,
             text_select=True,
             min_size=(800, 600)
         )
+        
         webview.start(
             gui='edgechromium',
             debug=True  # 開発者ツールを有効化
         )
+        
+        # WebView終了後にクリーンな状態で終了
+        print("\n✅ WebViewアプリケーションが終了しました")
+        
     except ImportError:
         print("❌ webviewモジュールが見つかりません。pip install pywebview を実行してください")
     except Exception as e:
         print(f"❌ WebView2起動エラー: {e}")
+    finally:
+        # ターミナル状態をリセットするためにプロセスを終了
+        import sys
+        sys.exit(0)
 
 def setup_virtualenv():
     """仮想環境のセットアップを確認"""

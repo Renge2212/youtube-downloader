@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Container,
   TextField,
@@ -26,7 +26,7 @@ interface DownloadStatus {
 function App() {
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('mp4');
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [, setTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState<DownloadStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

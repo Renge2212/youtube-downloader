@@ -4,6 +4,9 @@ import yt_dlp
 import os
 import tempfile
 import threading
+import sys
+import webbrowser
+from static_server import start_static_server
 
 app = Flask(__name__)
 CORS(app)
@@ -143,4 +146,25 @@ def get_download(task_id):
     return send_file(file_path, as_attachment=True, download_name=filename)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # 製品版モードかどうかをチェック
+    is_production = getattr(sys, 'frozen', False)
+    
+    if is_production:
+        # 製品版: 静的ファイルサーバーを起動
+        # PyInstallerでビルドされた場合、実行ファイルと同じディレクトリにfrontend/distが配置される
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        frontend_dist = os.path.join(base_dir, 'frontend', 'dist')
+        if os.path.exists(frontend_dist):
+            start_static_server(frontend_dist, port=5173)
+            webbrowser.open('http://localhost:5173')
+        else:
+            print("警告: フロントエンドのビルドファイルが見つかりません")
+            print(f"探しているパス: {frontend_dist}")
+    
+    # メインのFlaskアプリを起動
+    app.run(
+        host='127.0.0.1', 
+        port=5000, 
+        debug=not is_production,
+        threaded=True
+    )

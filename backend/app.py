@@ -122,11 +122,54 @@ class DownloadThread(threading.Thread):
     def progress_hook(self, d):
         """ダウンロード進捗をログに記録"""
         if d['status'] == 'downloading':
-            percent = d.get('_percent_str', 'N/A')
+            # 進捗情報を取得（複数の方法を試す）
+            percent = d.get('_percent_str', '')
             speed = d.get('_speed_str', 'N/A')
-            add_log(f"ダウンロード中: {percent}完了, 速度: {speed}")
+            
+            # ANSIエスケープシーケンスを除去（速度表示のクリーンアップ）
+            import re
+            if speed and speed != 'N/A':
+                # ANSIエスケープシーケンスを除去
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+                clean_speed = ansi_escape.sub('', speed).strip()
+            else:
+                clean_speed = speed
+            
+            # 進捗率をより確実に取得する方法
+            progress_value = None
+            
+            # 方法1: _percent_strから直接数値を抽出
+            if percent and '%' in percent:
+                try:
+                    # 余分なスペースと%を削除
+                    cleaned = percent.strip().replace('%', '').strip()
+                    if cleaned:
+                        progress_value = float(cleaned)
+                except (ValueError, TypeError):
+                    progress_value = None
+            
+            # 方法2: ダウンロード済みサイズと総サイズから計算
+            if progress_value is None:
+                downloaded = d.get('downloaded_bytes', 0)
+                total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
+                if total > 0:
+                    progress_value = (downloaded / total) * 100
+            
+            # 方法3: 進捗情報が利用できない場合はデフォルト値
+            if progress_value is None:
+                progress_value = 0
+            
+            # 進捗情報を保存
+            download_tasks[self.task_id]['progress'] = progress_value
+            download_tasks[self.task_id]['speed'] = clean_speed
+            
+            add_log(f"ダウンロード中: {progress_value:.1f}%完了, 速度: {clean_speed}")
+                
         elif d['status'] == 'finished':
             add_log("ダウンロード完了、後処理中")
+            # 完了時に進捗を100%に設定
+            download_tasks[self.task_id]['progress'] = 100.0
+            download_tasks[self.task_id]['speed'] = '完了'
 
 @app.route('/download', methods=['POST'])
 def download_video():
@@ -188,7 +231,9 @@ def check_status(task_id):
         'status': task['status'],
         'format': task['format'],
         'url': task['url'],
-        'error': task.get('error')
+        'error': task.get('error'),
+        'progress': task.get('progress'),
+        'speed': task.get('speed')
     })
 
 @app.route('/download/<task_id>', methods=['GET'])

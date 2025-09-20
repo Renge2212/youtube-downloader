@@ -121,11 +121,11 @@ def run_webview(port=5173):
         window = webview.create_window(
             'YouTube Downloader (開発モード)',
             f'http://localhost:{port}',  # Vite開発サーバー
-            width=1000,
-            height=700,
+            width=600,
+            height=900,
             resizable=True,
             text_select=True,
-            min_size=(800, 600)
+            min_size=(900, 600)
         )
         
         webview.start(

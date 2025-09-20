@@ -43,11 +43,11 @@ if __name__ == '__main__':
     window = webview.create_window(
         'YouTube Downloader',
         'http://127.0.0.1:5173',  # フロントエンドの静的サーバー
-        width=1200,
-        height=800,
+        width=600,
+        height=900,
         resizable=True,
         text_select=True,
-        min_size=(800, 600)
+        min_size=(900, 600)
     )
     
     # WebView2を起動

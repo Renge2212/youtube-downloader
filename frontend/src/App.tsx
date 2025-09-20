@@ -12,7 +12,9 @@ import {
   Card,
   CardContent,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  LinearProgress
 } from '@mui/material';
 import { Download, MusicNote, VideoLibrary } from '@mui/icons-material';
 
@@ -21,6 +23,8 @@ interface DownloadStatus {
   format: string;
   url: string;
   error?: string;
+  progress?: number;
+  speed?: string;
 }
 
 function App() {
@@ -29,14 +33,16 @@ function App() {
   const [, setTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState<DownloadStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [logIntervalId, setLogIntervalId] = useState<number | null>(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' as 'success' | 'error' | 'warning' | 'info' });
 
   const handleDownload = async () => {
     if (!url) {
       setError('YouTubeのURLを入力してください');
+      showSnackbar('YouTubeのURLを入力してください', 'warning');
       return;
     }
 
@@ -61,7 +67,8 @@ function App() {
       setTaskId(data.task_id);
       checkStatus(data.task_id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      const errorMessage = err instanceof Error ? err.message : 'エラーが発生しました';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -84,7 +91,6 @@ function App() {
         window.open(`http://localhost:5000/download/${taskId}`, '_blank');
         setLoading(false);
       } else if (statusData.status === 'error') {
-        setError(statusData.error || 'ダウンロード中にエラーが発生しました');
         setLoading(false);
       }
     } catch (err) {
@@ -123,6 +129,14 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setLogs(data.logs);
+        
+        // ログ更新後に自動スクロール
+        setTimeout(() => {
+          const logContainer = document.querySelector('[data-log-container]');
+          if (logContainer) {
+            logContainer.scrollTop = logContainer.scrollHeight;
+          }
+        }, 0);
       }
     } catch (err) {
       console.error('ログの取得に失敗しました:', err);
@@ -133,7 +147,7 @@ function App() {
     if (!showLogs) {
       fetchLogs();
       // ログ表示中は定期的に更新
-      const intervalId = window.setInterval(fetchLogs, 200);
+      const intervalId = window.setInterval(fetchLogs, 500);
       setLogIntervalId(intervalId);
     } else {
       // ログ非表示時にインターバルをクリア
@@ -145,8 +159,17 @@ function App() {
     setShowLogs(!showLogs);
   };
 
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
   return (
-    <Container maxWidth="sm" sx={{ py: 3, px: 2 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, px: 2, overflow: 'hidden' }}>
+      <Container maxWidth="sm" sx={{ width: '100%', overflow: 'hidden' }}>
       {/* ヘッダー */}
       <Box textAlign="center" mb={3}>
         <Typography 
@@ -254,50 +277,72 @@ function App() {
             </Box>
           </Box>
 
-          {/* エラーメッセージ */}
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mt: 2, 
-                borderRadius: 1,
-                '& .MuiAlert-message': {
-                  fontSize: '0.875rem'
-                }
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
           {/* ステータス表示 */}
           {status && (
             <Box mt={2}>
-              <Alert 
-                severity={
-                  status.status === 'completed' ? 'success' :
-                  status.status === 'error' ? 'error' : 'info'
-                }
-                sx={{ 
-                  borderRadius: 1,
-                  '& .MuiAlert-message': {
-                    fontSize: '0.875rem'
-                  }
-                }}
-              >
-                {status.status === 'processing' && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {status.status === 'processing' && (
+                <Box sx={{ width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <CircularProgress size={16} sx={{ mr: 1 }} />
-                    ダウンロード処理中...
+                    <Typography variant="body2" color="text.secondary">
+                      ダウンロード中...
+                    </Typography>
                   </Box>
-                )}
-                {status.status === 'completed' && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    ✅ ダウンロードが完了しました！
-                  </Box>
-                )}
-                {status.status === 'error' && `❌ エラー: ${status.error}`}
-              </Alert>
+                  {status.progress !== undefined && (
+                    <Box sx={{ width: '100%', mb: 1 }}>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={status.progress} 
+                        sx={{ 
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                          '& .MuiLinearProgress-bar': {
+                            borderRadius: 4,
+                            background: 'linear-gradient(45deg, #1976d2, #42a5f5)'
+                          }
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {Math.round(status.progress)}% 完了
+                        </Typography>
+                        {status.speed && (
+                          <Typography variant="caption" color="text.secondary">
+                            速度: {status.speed}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              {status.status === 'completed' && (
+                <Alert 
+                  severity="success"
+                  sx={{ 
+                    borderRadius: 1,
+                    '& .MuiAlert-message': {
+                      fontSize: '0.875rem'
+                    }
+                  }}
+                >
+                  ダウンロードが完了しました！
+                </Alert>
+              )}
+              {status.status === 'error' && (
+                <Alert 
+                  severity="error"
+                  sx={{ 
+                    borderRadius: 1,
+                    '& .MuiAlert-message': {
+                      fontSize: '0.875rem'
+                    }
+                  }}
+                >
+                  {status.error}
+                </Alert>
+              )}
             </Box>
           )}
         </CardContent>
@@ -341,6 +386,7 @@ function App() {
               バックエンドログ
             </Typography>
             <Box 
+              data-log-container
               sx={{ 
                 backgroundColor: '#f5f5f5', 
                 p: 1, 
@@ -366,7 +412,24 @@ function App() {
           </CardContent>
         </Card>
       )}
-    </Container>
+
+      {/* スナックバー通知 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      </Container>
+    </Box>
   );
 }
 

@@ -115,19 +115,43 @@ function App() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box textAlign="center" mb={4}>
-        <Typography variant="h3" component="h1" gutterBottom color="primary">
+    <Container maxWidth="sm" sx={{ py: 3, px: 2 }}>
+      {/* ヘッダー */}
+      <Box textAlign="center" mb={3}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom 
+          color="primary"
+          fontWeight="bold"
+          sx={{ 
+            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+            backgroundClip: 'text',
+            textFillColor: 'transparent',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}
+        >
           YouTube Downloader
         </Typography>
-        <Typography variant="h6" color="text.secondary">
-          YouTubeの動画をMP4、MP3、M4A形式でダウンロード
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+          YouTube動画を簡単にダウンロード
         </Typography>
       </Box>
 
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* メインカード */}
+      <Card 
+        elevation={3} 
+        sx={{ 
+          borderRadius: 2,
+          background: 'linear-gradient(145deg, #ffffff, #f8f9fa)',
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* URL入力フィールド */}
             <TextField
               fullWidth
               label="YouTube URL"
@@ -136,10 +160,31 @@ function App() {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://www.youtube.com/watch?v=..."
               disabled={loading}
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1,
+                }
+              }}
             />
 
-            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-              <FormControl fullWidth>
+            {/* フォーマット選択とダウンロードボタン */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'flex-end' }
+            }}>
+              <FormControl 
+                fullWidth 
+                size="small"
+                sx={{ 
+                  minWidth: { sm: 120 },
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                  }
+                }}
+              >
                 <InputLabel>フォーマット</InputLabel>
                 <Select
                   value={format}
@@ -159,19 +204,41 @@ function App() {
                 onClick={handleDownload}
                 disabled={loading || !url}
                 startIcon={loading ? <CircularProgress size={20} /> : <Download />}
-                sx={{ height: '56px', minWidth: '140px' }}
+                sx={{ 
+                  minWidth: '120px',
+                  borderRadius: 1,
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #1565c0, #1e88e5)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: 3
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
               >
                 {loading ? '処理中...' : 'ダウンロード'}
               </Button>
             </Box>
           </Box>
 
+          {/* エラーメッセージ */}
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mt: 2, 
+                borderRadius: 1,
+                '& .MuiAlert-message': {
+                  fontSize: '0.875rem'
+                }
+              }}
+            >
               {error}
             </Alert>
           )}
 
+          {/* ステータス表示 */}
           {status && (
             <Box mt={2}>
               <Alert 
@@ -179,24 +246,35 @@ function App() {
                   status.status === 'completed' ? 'success' :
                   status.status === 'error' ? 'error' : 'info'
                 }
+                sx={{ 
+                  borderRadius: 1,
+                  '& .MuiAlert-message': {
+                    fontSize: '0.875rem'
+                  }
+                }}
               >
                 {status.status === 'processing' && (
-                  <>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <CircularProgress size={16} sx={{ mr: 1 }} />
                     ダウンロード処理中...
-                  </>
+                  </Box>
                 )}
-                {status.status === 'completed' && 'ダウンロードが完了しました！'}
-                {status.status === 'error' && `エラー: ${status.error}`}
+                {status.status === 'completed' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    ✅ ダウンロードが完了しました！
+                  </Box>
+                )}
+                {status.status === 'error' && `❌ エラー: ${status.error}`}
               </Alert>
             </Box>
           )}
         </CardContent>
       </Card>
 
-      <Box mt={4} textAlign="center">
-        <Typography variant="body2" color="text.secondary">
-          現在選択中のフォーマット: {getFormatIcon()} {getFormatLabel()}
+      {/* フッター情報 */}
+      <Box mt={3} textAlign="center">
+        <Typography variant="caption" color="text.secondary">
+          現在の選択: {getFormatIcon()} {getFormatLabel()}
         </Typography>
       </Box>
     </Container>

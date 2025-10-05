@@ -1,0 +1,145 @@
+name: Update yt-dlp and Auto Release
+
+on:
+  schedule:
+    # 毎日午前6時（UTC）に実行（日本時間午後3時）
+    - cron: '0 6 * * *'
+  workflow_dispatch: # 手動実行も可能
+  push:
+    branches: [ main ]
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    outputs:
+      update_available: ${{ steps.check_update.outputs.update_available }}
+      new_version: ${{ steps.check_update.outputs.new_version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Check for yt-dlp updates
+      id: check_update
+      run: |
+        # 現在のrequirements.txtからyt-dlpのバージョンを取得
+        current_version=$(grep 'yt-dlp' backend/requirements.txt | head -1)
+        echo "Current version in requirements.txt: $current_version"
+        
+        # 最新のyt-dlpバージョンを取得
+        latest_version=$(pip index versions yt-dlp | grep 'Available versions:' | sed 's/Available versions: //' | awk '{print $1}')
+        echo "Latest available version: $latest_version"
+        
+        # バージョン比較
+        if [[ "$current_version" == *"$latest_version"* ]]; then
+          echo "yt-dlp is already up to date"
+          echo "update_available=false" >> $GITHUB_OUTPUT
+          echo "new_version=" >> $GITHUB_OUTPUT
+        else
+          echo "Update available: $latest_version"
+          echo "update_available=true" >> $GITHUB_OUTPUT
+          echo "new_version=$latest_version" >> $GITHUB_OUTPUT
+        fi
+
+  update-requirements:
+    needs: check-and-update
+    if: needs.check-and-update.outputs.update_available == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Update requirements.txt
+      run: |
+        # yt-dlpを最新版に更新
+        pip install -U yt-dlp
+        # 更新されたバージョンをrequirements.txtに反映
+        pip freeze | grep 'yt-dlp' > backend/requirements.txt.tmp
+        # 他の依存関係は保持
+        grep -v 'yt-dlp' backend/requirements.txt >> backend/requirements.txt.tmp
+        mv backend/requirements.txt.tmp backend/requirements.txt
+        
+        # 変更内容を表示
+        echo "Updated requirements.txt:"
+        cat backend/requirements.txt
+
+    - name: Commit changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add backend/requirements.txt
+        git commit -m "chore: update yt-dlp to ${{ needs.check-and-update.outputs.new_version }}"
+        git push
+
+  build-and-release:
+    needs: update-requirements
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
+
+    - name: Download FFmpeg
+      run: |
+        python download_ffmpeg.py
+
+    - name: Build executable
+      run: |
+        cd backend
+        pyinstaller --name="YouTubeDownloader" --onefile --add-data="../frontend/dist;frontend/dist" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil webview_app.py
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: backend/dist/YouTubeDownloader.exe
+        tag_name: release-${{ github.run_id }}
+        name: "Auto Release - yt-dlp ${{ needs.check-and-update.outputs.new_version }}"
+        body: |
+          Automated release with updated yt-dlp to version ${{ needs.check-and-update.outputs.new_version }}
+          
+          Changes:
+          - Updated yt-dlp to latest version
+          - Built with latest dependencies
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

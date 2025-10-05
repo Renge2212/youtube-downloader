@@ -79,6 +79,26 @@ class DownloadThread(threading.Thread):
                     'format': 'bestaudio[ext=m4a]/bestaudio',
                 })
                 add_log("M4A形式でダウンロード")
+            elif self.format_type == 'wav':
+                ydl_opts.update({
+                    'format': 'bestaudio[ext=wav]/bestaudio',
+                })
+                add_log("WAV形式でダウンロード")
+            elif self.format_type == 'ogg':
+                ydl_opts.update({
+                    'format': 'bestaudio[ext=ogg]/bestaudio',
+                })
+                add_log("OGG形式でダウンロード")
+            elif self.format_type == 'flac':
+                ydl_opts.update({
+                    'format': 'bestaudio[ext=flac]/bestaudio',
+                })
+                add_log("FLAC形式でダウンロード")
+            elif self.format_type == 'opus':
+                ydl_opts.update({
+                    'format': 'bestaudio[ext=opus]/bestaudio',
+                })
+                add_log("Opus形式でダウンロード")
             else:  # mp4
                 # 画質に応じたフォーマット設定
                 if self.quality == 'highest':
@@ -227,9 +247,9 @@ def download_video():
             add_log("URLが指定されていません")
             return jsonify({'error': 'URL is required'}), 400
 
-        if format_type not in ['mp4', 'mp3', 'm4a']:
+        if format_type not in ['mp4', 'mp3', 'm4a', 'wav', 'ogg', 'flac', 'opus']:
             add_log(f"無効なフォーマット: {format_type}")
-            return jsonify({'error': 'Invalid format. Choose from mp4, mp3, m4a'}), 400
+            return jsonify({'error': 'Invalid format. Choose from mp4, mp3, m4a, wav, ogg, flac, opus'}), 400
 
         # タスクIDを生成
         import uuid
@@ -296,6 +316,65 @@ def index():
 def get_logs():
     """ログを取得"""
     return jsonify({'logs': log_messages})
+
+@app.route('/update-yt-dlp', methods=['POST'])
+def update_yt_dlp():
+    """yt-dlpをアップデート（開発モードのみ）"""
+    try:
+        add_log("yt-dlpアップデートリクエストを受信")
+        
+        # 仮想環境のpipを使用してyt-dlpをアップデート
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        venv_pip = os.path.join(backend_dir, 'venv', 'Scripts', 'pip.exe')
+        
+        if not os.path.exists(venv_pip):
+            add_log("エラー: 仮想環境のpipが見つかりません")
+            return jsonify({'error': '仮想環境が見つかりません。開発モードで実行してください'}), 400
+        
+        add_log("yt-dlpのアップデートを開始します...")
+        
+        # アップデート実行
+        import subprocess
+        result = subprocess.run(
+            [venv_pip, 'install', '-U', 'yt-dlp'],
+            capture_output=True,
+            text=True,
+            cwd=backend_dir
+        )
+        
+        if result.returncode == 0:
+            add_log("yt-dlpのアップデートが成功しました")
+            # 新しいバージョン情報を取得
+            version_result = subprocess.run(
+                [venv_pip, 'show', 'yt-dlp'],
+                capture_output=True,
+                text=True,
+                cwd=backend_dir
+            )
+            
+            version_info = {}
+            for line in version_result.stdout.split('\n'):
+                if 'Version:' in line:
+                    version_info['version'] = line.split('Version:')[1].strip()
+                if 'Location:' in line:
+                    version_info['location'] = line.split('Location:')[1].strip()
+            
+            return jsonify({
+                'success': True,
+                'message': 'yt-dlpが正常にアップデートされました',
+                'version': version_info.get('version', '不明'),
+                'location': version_info.get('location', '不明')
+            })
+        else:
+            add_log(f"yt-dlpアップデートエラー: {result.stderr}")
+            return jsonify({
+                'success': False,
+                'error': f'アップデートに失敗しました: {result.stderr}'
+            }), 500
+            
+    except Exception as e:
+        add_log(f"yt-dlpアップデート処理エラー: {e}")
+        return jsonify({'error': f'内部サーバーエラー: {e}'}), 500
 
 if __name__ == '__main__':
     # 製品版モードかどうかをチェック

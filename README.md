@@ -1,12 +1,16 @@
 # YouTube Downloader
 
-YouTubeの動画をMP4、MP3、M4A形式でダウンロードできるWindowsアプリケーションです。
+YouTubeの動画をMP4、MP3、M4A、WAV、OGG、FLAC、Opus形式でダウンロードできるWindowsアプリケーションです。
 
 ## 機能
 
 - YouTube動画のMP4形式でのダウンロード
 - 音声のみのMP3形式での抽出
 - 音声のみのM4A形式での抽出
+- 音声のみのWAV形式での抽出
+- 音声のみのOGG形式での抽出
+- 音声のみのFLAC形式での抽出
+- 音声のみのOpus形式での抽出
 - モダンなWebインターフェース
 - リアルタイムのダウンロード進捗表示
 - Windowsネイティブアプリケーション（WebView2使用）

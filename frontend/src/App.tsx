@@ -39,6 +39,8 @@ function App() {
   const [showLogs, setShowLogs] = useState(false);
   const [logIntervalId, setLogIntervalId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' as 'success' | 'error' | 'warning' | 'info' });
+  const [updating, setUpdating] = useState(false);
+  const [updateResult, setUpdateResult] = useState<{success?: boolean, message?: string, version?: string, error?: string} | null>(null);
 
   const handleDownload = async () => {
     if (!url) {
@@ -103,8 +105,11 @@ function App() {
   const getFormatIcon = () => {
     switch (format) {
       case 'mp3':
-        return <MusicNote sx={{ mr: 1 }} />;
       case 'm4a':
+      case 'wav':
+      case 'ogg':
+      case 'flac':
+      case 'opus':
         return <MusicNote sx={{ mr: 1 }} />;
       default:
         return <VideoLibrary sx={{ mr: 1 }} />;
@@ -119,6 +124,14 @@ function App() {
         return 'MP3 音声';
       case 'm4a':
         return 'M4A 音声';
+      case 'wav':
+        return 'WAV 音声';
+      case 'ogg':
+        return 'OGG 音声';
+      case 'flac':
+        return 'FLAC 音声';
+      case 'opus':
+        return 'Opus 音声';
       default:
         return format;
     }
@@ -183,6 +196,39 @@ function App() {
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleUpdateYtDlp = async () => {
+    setUpdating(true);
+    setUpdateResult(null);
+    
+    try {
+      const response = await fetch('http://localhost:5000/update-yt-dlp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('アップデートリクエストに失敗しました');
+      }
+
+      const data = await response.json();
+      setUpdateResult(data);
+      
+      if (data.success) {
+        showSnackbar(`yt-dlpが正常にアップデートされました (バージョン: ${data.version})`, 'success');
+      } else {
+        showSnackbar(`アップデートに失敗しました: ${data.error}`, 'error');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'エラーが発生しました';
+      showSnackbar(`アップデートエラー: ${errorMessage}`, 'error');
+      setUpdateResult({ success: false, message: errorMessage });
+    } finally {
+      setUpdating(false);
+    }
   };
 
   return (
@@ -258,16 +304,20 @@ function App() {
                 }}
               >
                 <InputLabel>フォーマット</InputLabel>
-                <Select
-                  value={format}
-                  label="フォーマット"
-                  onChange={(e) => setFormat(e.target.value)}
-                  disabled={loading}
-                >
-                  <MenuItem value="mp4">MP4 動画</MenuItem>
-                  <MenuItem value="mp3">MP3 音声</MenuItem>
-                  <MenuItem value="m4a">M4A 音声</MenuItem>
-                </Select>
+                  <Select
+                    value={format}
+                    label="フォーマット"
+                    onChange={(e) => setFormat(e.target.value)}
+                    disabled={loading}
+                  >
+                    <MenuItem value="mp4">MP4 動画</MenuItem>
+                    <MenuItem value="mp3">MP3 音声</MenuItem>
+                    <MenuItem value="m4a">M4A 音声</MenuItem>
+                    <MenuItem value="wav">WAV 音声</MenuItem>
+                    <MenuItem value="ogg">OGG 音声</MenuItem>
+                    <MenuItem value="flac">FLAC 音声</MenuItem>
+                    <MenuItem value="opus">Opus 音声</MenuItem>
+                  </Select>
               </FormControl>
 
               {/* 画質選択（MP4形式のみ表示） */}
@@ -400,8 +450,8 @@ function App() {
           現在の選択: {getFormatIcon()} {getFormatLabel()}{format === 'mp4' && ` (${getQualityLabel()})`}
         </Typography>
         
-        {/* ログ表示トグルボタン */}
-        <Box mt={2}>
+        {/* ログ表示トグルボタンとアップデートボタン */}
+        <Box mt={2} sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Button
             variant="outlined"
             size="small"
@@ -413,8 +463,57 @@ function App() {
           >
             {showLogs ? 'ログを隠す' : '開発者ログを表示'}
           </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleUpdateYtDlp}
+            disabled={updating}
+            startIcon={updating ? <CircularProgress size={16} /> : null}
+            sx={{ 
+              fontSize: '0.75rem',
+              borderRadius: 1,
+              borderColor: updating ? 'text.disabled' : 'primary.main'
+            }}
+          >
+            {updating ? 'アップデート中...' : 'yt-dlp更新'}
+          </Button>
         </Box>
       </Box>
+
+      {/* アップデート結果表示 */}
+      {updateResult && (
+        <Card 
+          elevation={2} 
+          sx={{ 
+            mt: 2,
+            borderRadius: 1
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
+              アップデート結果
+            </Typography>
+            <Alert 
+              severity={updateResult.success ? 'success' : 'error'}
+              sx={{ borderRadius: 1 }}
+            >
+              {updateResult.success ? (
+                <Box>
+                  <Typography variant="body2">{updateResult.message}</Typography>
+                  {updateResult.version && (
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                      バージョン: {updateResult.version}
+                    </Typography>
+                  )}
+                </Box>
+              ) : (
+                <Typography variant="body2">{updateResult.message || updateResult.error}</Typography>
+              )}
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ログ表示セクション */}
       {showLogs && (

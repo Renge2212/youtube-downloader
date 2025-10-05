@@ -1,7 +1,7 @@
 # YouTubeDownloader 利用上の注意
 
 ## アプリケーション概要
-このアプリケーションはYouTubeの動画をMP4、MP3、M4A形式でダウンロードできるWindows用ツールです。
+このアプリケーションはYouTubeの動画をMP4、MP3、M4A、WAV、OGG、FLAC、Opus形式でダウンロードできるWindows用ツールです。
 
 ## 重要なお知らせ
 

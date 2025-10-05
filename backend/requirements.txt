@@ -3,3 +3,4 @@ Flask==3.0.3
 Flask-CORS==5.0.0
 waitress
 pywebview
+requests

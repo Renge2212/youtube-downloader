@@ -13,7 +13,7 @@ def download_ffmpeg():
     # ディレクトリ作成
     os.makedirs(ffmpeg_dir, exist_ok=True)
     
-    print("FFmpegをダウンロード中...")
+    print("Downloading FFmpeg...")
     
     try:
         # FFmpegをダウンロード
@@ -24,7 +24,7 @@ def download_ffmpeg():
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         
-        print("FFmpegを展開中...")
+        print("Extracting FFmpeg...")
         
         # ZIPファイルを展開
         with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
@@ -44,11 +44,11 @@ def download_ffmpeg():
         # 一時ZIPファイルを削除
         os.remove(temp_zip)
         
-        print("FFmpegのダウンロードと展開が完了しました")
+        print("FFmpeg download and extraction completed")
         return True
         
     except Exception as e:
-        print(f"FFmpegのダウンロードに失敗しました: {e}")
+        print(f"FFmpeg download failed: {e}")
         # クリーンアップ
         if os.path.exists(temp_zip):
             os.remove(temp_zip)

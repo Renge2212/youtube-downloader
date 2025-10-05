@@ -1,5 +1,5 @@
+yt-dlp==2025.9.26
 Flask==3.0.3
 Flask-CORS==5.0.0
-yt-dlp
 waitress
 pywebview

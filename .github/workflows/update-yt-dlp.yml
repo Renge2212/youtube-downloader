@@ -101,12 +101,14 @@ jobs:
     - name: Commit and push changes
       if: steps.check_changes.outputs.has_changes == 'true'
       run: |
-        # 最新の変更を取得
-        git pull --rebase origin main
+        # 変更をステージング
+        git add backend/requirements.txt
         
         # 変更をコミット
-        git add backend/requirements.txt
         git commit -m "chore: update yt-dlp to ${{ needs.check-and-update.outputs.new_version }}"
+        
+        # 最新の変更を取得してマージ（リベースではなく）
+        git pull origin main
         
         # プッシュ実行
         git push origin main

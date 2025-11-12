@@ -1,4 +1,4 @@
-yt-dlp==2025.10.22
+yt-dlp==2025.11.12
 Flask==3.0.3
 Flask-CORS==5.0.0
 waitress

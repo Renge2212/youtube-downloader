@@ -159,7 +159,7 @@ jobs:
         pyinstaller --name="YouTubeDownloader" --onefile --add-data="../frontend/dist;frontend/dist" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil webview_app.py
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: backend/dist/YouTubeDownloader.exe
         tag_name: release-${{ github.run_id }}

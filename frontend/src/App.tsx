@@ -31,26 +31,20 @@ function App() {
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('mp4');
   const [quality, setQuality] = useState('auto');
-  const [, setTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState<DownloadStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [, setError] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [logIntervalId, setLogIntervalId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' as 'success' | 'error' | 'warning' | 'info' });
-  const [updating, setUpdating] = useState(false);
-  const [updateResult, setUpdateResult] = useState<{success?: boolean, message?: string, version?: string, error?: string} | null>(null);
 
   const handleDownload = async () => {
     if (!url) {
-      setError('YouTubeのURLを入力してください');
       showSnackbar('YouTubeのURLを入力してください', 'warning');
       return;
     }
 
     setLoading(true);
-    setError('');
     setStatus(null);
 
     try {
@@ -67,11 +61,10 @@ function App() {
       }
 
       const data = await response.json();
-      setTaskId(data.task_id);
       checkStatus(data.task_id);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'エラーが発生しました';
-      setError(errorMessage);
+      showSnackbar(errorMessage, 'error');
       setLoading(false);
     }
   };
@@ -97,7 +90,8 @@ function App() {
         setLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ステータス確認中にエラーが発生しました');
+      const errorMessage = err instanceof Error ? err.message : 'ステータス確認中にエラーが発生しました';
+      showSnackbar(errorMessage, 'error');
       setLoading(false);
     }
   };
@@ -198,38 +192,6 @@ function App() {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleUpdateYtDlp = async () => {
-    setUpdating(true);
-    setUpdateResult(null);
-    
-    try {
-      const response = await fetch('http://localhost:5000/update-yt-dlp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('アップデートリクエストに失敗しました');
-      }
-
-      const data = await response.json();
-      setUpdateResult(data);
-      
-      if (data.success) {
-        showSnackbar(`yt-dlpが正常にアップデートされました (バージョン: ${data.version})`, 'success');
-      } else {
-        showSnackbar(`アップデートに失敗しました: ${data.error}`, 'error');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'エラーが発生しました';
-      showSnackbar(`アップデートエラー: ${errorMessage}`, 'error');
-      setUpdateResult({ success: false, message: errorMessage });
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, px: 2, overflow: 'hidden' }}>
@@ -450,7 +412,7 @@ function App() {
           現在の選択: {getFormatIcon()} {getFormatLabel()}{format === 'mp4' && ` (${getQualityLabel()})`}
         </Typography>
         
-        {/* ログ表示トグルボタンとアップデートボタン */}
+        {/* ログ表示トグルボタン */}
         <Box mt={2} sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Button
             variant="outlined"
@@ -463,57 +425,9 @@ function App() {
           >
             {showLogs ? 'ログを隠す' : '開発者ログを表示'}
           </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleUpdateYtDlp}
-            disabled={updating}
-            startIcon={updating ? <CircularProgress size={16} /> : null}
-            sx={{ 
-              fontSize: '0.75rem',
-              borderRadius: 1,
-              borderColor: updating ? 'text.disabled' : 'primary.main'
-            }}
-          >
-            {updating ? 'アップデート中...' : 'yt-dlp更新'}
-          </Button>
         </Box>
       </Box>
 
-      {/* アップデート結果表示 */}
-      {updateResult && (
-        <Card 
-          elevation={2} 
-          sx={{ 
-            mt: 2,
-            borderRadius: 1
-          }}
-        >
-          <CardContent sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
-              アップデート結果
-            </Typography>
-            <Alert 
-              severity={updateResult.success ? 'success' : 'error'}
-              sx={{ borderRadius: 1 }}
-            >
-              {updateResult.success ? (
-                <Box>
-                  <Typography variant="body2">{updateResult.message}</Typography>
-                  {updateResult.version && (
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                      バージョン: {updateResult.version}
-                    </Typography>
-                  )}
-                </Box>
-              ) : (
-                <Typography variant="body2">{updateResult.message || updateResult.error}</Typography>
-              )}
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ログ表示セクション */}
       {showLogs && (

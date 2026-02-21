@@ -1,0 +1,71 @@
+name: Standard Release Workflow
+
+on:
+  push:
+    tags:
+      - 'v*' # v1.0, v2024.1, etc...
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.0.0)'
+        required: true
+        default: 'latest'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "backend/pyproject.toml"
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Install Python dependencies with uv
+      run: |
+        cd backend
+        uv pip install --system -e .[dev]
+
+    - name: Download FFmpeg
+      run: |
+        python backend/download_ffmpeg.py || echo "Falling back, script might be in root" && python download_ffmpeg.py
+
+    - name: Build executable
+      run: |
+        cd backend
+        python -m PyInstaller --name="YouTubeDownloader" --onefile --add-data="../frontend/dist;frontend/dist" --hidden-import=static_server --hidden-import=ffmpeg --hidden-import=shutil webview_app.py
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: backend/dist/YouTubeDownloader.exe
+        name: "Release ${{ github.ref_name || github.event.inputs.version }}"
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

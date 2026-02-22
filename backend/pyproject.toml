@@ -6,7 +6,7 @@ authors = [{ name = "Developer", email = "action@github.com" }]
 requires-python = ">=3.10"
 dependencies = [
     "Flask==3.0.3",
-    "Flask-CORS==5.0.0",
+    "Flask-CORS==6.0.2",
     "pywebview>=5.0.0",
     "requests",
     "waitress",

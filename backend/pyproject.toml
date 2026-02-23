@@ -10,7 +10,7 @@ dependencies = [
     "pywebview>=5.0.0",
     "requests",
     "waitress",
-    "yt-dlp==2025.9.26"
+    "yt-dlp==2026.2.21"
 ]
 
 [project.optional-dependencies]

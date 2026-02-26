@@ -20,7 +20,7 @@ jobs:
       new_version: ${{ steps.check_update.outputs.new_version }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0  # すべての履歴を取得
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0  # すべての履歴を取得
@@ -120,7 +120,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
